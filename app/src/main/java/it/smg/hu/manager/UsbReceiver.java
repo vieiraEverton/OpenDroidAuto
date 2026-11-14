@@ -6,7 +6,9 @@ import android.content.Intent;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbManager;
 
+import it.smg.hu.service.ODAService;
 import it.smg.hu.ui.MainActivity;
+import it.smg.hu.ui.PlayerActivity;
 import it.smg.hu.ui.notification.NotificationFactory;
 import it.smg.libs.common.Log;
 
@@ -35,9 +37,12 @@ public class UsbReceiver extends BroadcastReceiver {
         } else if (UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action)) {
             manager.onUsbDetached(intent.getParcelableExtra(UsbManager.EXTRA_DEVICE));
         } else if (USBManager.ATTACH_AOAP_DEVICE.equals(action)) {
-            if (!MainActivity.isActive()){
-                if (Log.isDebug()) Log.d(TAG, "open popup activity");
-                NotificationFactory.instance().notifyStartRequest();
+            if (!PlayerActivity.isActive()){
+                if (Log.isInfo()) Log.i(TAG, "auto-starting PlayerActivity on USB attach");
+                Intent startIntent = new Intent(context.getApplicationContext(), PlayerActivity.class);
+                startIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                startIntent.putExtra("mode", ODAService.MODE_USB);
+                context.getApplicationContext().startActivity(startIntent);
             }
         }
     }

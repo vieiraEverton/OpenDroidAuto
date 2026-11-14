@@ -9,6 +9,7 @@ import android.widget.RemoteViews;
 
 import it.smg.hu.R;
 import it.smg.hu.service.ODAService;
+import it.smg.hu.ui.PlayerActivity;
 import it.smg.libs.common.Log;
 
 public class ExitWidget extends AppWidgetProvider {
@@ -41,11 +42,10 @@ public class ExitWidget extends AppWidgetProvider {
         super.onReceive(context, intent);
 
         if (ACTION_WIDGET_EXIT.equals(intent.getAction())) {
+            PlayerActivity.finishIfRunning();
+
             Intent stopService = new Intent(context, ODAService.class);
             context.stopService(stopService);
-
-            android.os.Process.killProcess(android.os.Process.myPid());
-            System.exit(0);
         }
     }
 }

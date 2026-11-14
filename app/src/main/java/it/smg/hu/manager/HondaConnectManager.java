@@ -44,6 +44,8 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 import it.smg.hu.config.Settings;
+import it.smg.hu.projection.InputDevice;
+import it.smg.hu.projection.MediaStatusEvent;
 import it.smg.hu.ui.PlayerActivity;
 import it.smg.libs.aasdk.messenger.ChannelId;
 import it.smg.libs.aasdk.projection.ISensor;
@@ -254,8 +256,19 @@ public class HondaConnectManager {
     }
 
     public void requestAudioFocus(){
+        boolean needsFocus = !hasAudioFocus_;
+        if (!needsFocus && modeMgrManager_ != null) {
+            try {
+                int onAudioAddr = modeMgrManager_.getModeMgrOnAudioAddr();
+                if (onAudioAddr != settings_.advanced.modeMgrAudioVideoIdx() && onAudioAddr > 0) {
+                    if (Log.isDebug()) Log.d(TAG, "requestAudioFocus: hasAudioFocus_ was true but onAudioAddr=" + onAudioAddr + " != " + settings_.advanced.modeMgrAudioVideoIdx());
+                    needsFocus = true;
+                }
+            } catch (Exception ignored) {}
+        }
+
         // If AUTH_TYPE <> preinstall the app has already audio focus
-        if (isPreinstall() && modeMgrManager_ != null && !hasAudioFocus_) {
+        if (isPreinstall() && modeMgrManager_ != null && needsFocus) {
             requestFocus(settings_.advanced.modeMgrAudioVideoIdx(), ModeMgrMode.REQUEST_BOTH);
 
             if (Log.isDebug()) Log.d(TAG, "requestAudioFocus statusBarExManager_ audioSourceStartUp");
@@ -273,6 +286,14 @@ public class HondaConnectManager {
             registerSteeringMenuCallback();
             registerModeMgrSWCallbacks();
             notifySteeringMenuDispMode(1);
+
+            hasAudioFocus_ = true;
+
+            if (settings_.advanced.hondaImidEnabled()) {
+                try {
+                    modeMgrManager_.setImidConnectStatus(0);
+                } catch (Exception ignored) {}
+            }
         }
     }
 
@@ -282,9 +303,17 @@ public class HondaConnectManager {
             releaseFocus(settings_.advanced.modeMgrAudioVideoIdx(), ModeMgrMode.REQUEST_AUDIO);
             requestFocus(settings_.advanced.modeMgrVideoIdx(), ModeMgrMode.REQUEST_VIDEO);
 
+            hasAudioFocus_ = false;
+
             unregisterSteeringMenuCallback();
             unregisterModeMgrSWCallbacks();
             notifySteeringMenuDispMode(0);
+
+            if (settings_.advanced.hondaImidEnabled()) {
+                try {
+                    modeMgrManager_.setImidConnectStatus(0);
+                } catch (Exception ignored) {}
+            }
         }
     }
 
@@ -361,9 +390,10 @@ public class HondaConnectManager {
 
             if (settings_.advanced.hondaImidEnabled()) {
                 try {
-                    if (Log.isDebug()) Log.d(TAG, "requestFocus setImidConnectStatus 1");
-                    int ret = modeMgrManager_.setImidConnectStatus(1);
-                    if (Log.isDebug()) Log.d(TAG, "requestFocus setImidConnectStatus ret= " + ret);
+                    int status = 0;
+                    if (Log.isDebug()) Log.d(TAG, "initialize setImidConnectStatus " + status);
+                    int ret = modeMgrManager_.setImidConnectStatus(status);
+                    if (Log.isDebug()) Log.d(TAG, "initialize setImidConnectStatus ret= " + ret);
                 } catch (Exception e) {
                     Log.w(TAG, "Could not set i-MID connect status", e);
                 }
@@ -607,7 +637,7 @@ public class HondaConnectManager {
             try {
                 if (isPreinstall() && !hasAudioFocus_) {
                     if (Log.isDebug()) Log.d(TAG, "startMicSession hasAudioFocus_ false -> request audio focus");
-                    requestFocus(settings_.advanced.modeMgrVideoIdx(), ModeMgrMode.REQUEST_BOTH);
+                    requestFocus(settings_.advanced.modeMgrAudioVideoIdx(), ModeMgrMode.REQUEST_BOTH);
                     hasAudioFocusForMic_ = true;
                 }
 
@@ -685,7 +715,8 @@ public class HondaConnectManager {
 
             if (isPreinstall() && hasAudioFocusForMic_) {
                 if (Log.isDebug()) Log.d(TAG, "stopMicSession hasAudioFocusForMic_ true -> release audio focus");
-                releaseFocus(settings_.advanced.modeMgrVideoIdx(), ModeMgrMode.REQUEST_AUDIO);
+                releaseFocus(settings_.advanced.modeMgrAudioVideoIdx(), ModeMgrMode.REQUEST_AUDIO);
+                requestFocus(settings_.advanced.modeMgrVideoIdx(), ModeMgrMode.REQUEST_VIDEO);
             }
             hasAudioFocusForMic_ = false;
             micVrStarted_ = false;
@@ -762,6 +793,14 @@ public class HondaConnectManager {
             stateMgrServiceCallBack_ = new StateMgrServiceCallBack();
             int ret = stateMgrManager_.registCallBack(stateMgrServiceCallBack_, changeInfo);
             if (Log.isDebug()) Log.d(TAG, "registerStateMgrCallback ret " + ret);
+
+            try {
+                StateMgrInfo initialInfo = stateMgrManager_.getAllState();
+                if (initialInfo != null && initialInfo.audioAddress > 0) {
+                    if (Log.isDebug()) Log.d(TAG, "registerStateMgrCallback initial audioAddress: " + initialInfo.audioAddress);
+                    handleAudioAddressChanged(initialInfo.audioAddress);
+                }
+            } catch (Exception ignored) {}
         } else {
             Log.w(TAG, "stateMgrManager_ null -> do nothing");
         }
@@ -1053,11 +1092,6 @@ public class HondaConnectManager {
 
         public boolean onSteeringSWDown(int keytype) {
             if (Log.isDebug()) Log.d(TAG, "onSteeringSWDown " + keytype);
-//            if (Log.isVerbose()){
-//                mainHandler_.post(() -> {
-//                    Toast.makeText(context_, "onSteeringSWDown keytype= " + keytype, Toast.LENGTH_SHORT).show();
-//                });
-//            }
 
             Instrumentation instrumentation = new Instrumentation();
             instrumentation.sendKeyDownUpSync(keytype);
@@ -1128,8 +1162,62 @@ public class HondaConnectManager {
                     dayNightListener_.onDayNightUpdate(isNight);
                 }
             }
+
+            if (changed.audioAddressC) {
+                if (Log.isDebug()) Log.d(TAG, "audioAddress changed to " + info.audioAddress);
+                handleAudioAddressChanged(info.audioAddress);
+            }
         }
     };
+
+    private void handleAudioAddressChanged(int audioAddress) {
+        if (audioAddress <= 0) {
+            return;
+        }
+        if (Log.isDebug()) Log.d(TAG, "handleAudioAddressChanged: " + audioAddress + ", current hasAudioFocus_=" + hasAudioFocus_);
+
+        if (audioAddress == settings_.advanced.modeMgrAudioVideoIdx()) { // 197 (Bluetooth / Smartphone)
+            hasAudioFocus_ = true;
+            currentIdx_ = settings_.advanced.modeMgrAudioVideoIdx();
+            currentModeState_ = ModeMgrMode.NOTIFY_BOTH;
+
+            if (settings_.advanced.hondaImidEnabled() && modeMgrManager_ != null) {
+                try {
+                    if (Log.isDebug()) Log.d(TAG, "audioAddress 197 (Bluetooth) -> setImidConnectStatus 0");
+                    modeMgrManager_.setImidConnectStatus(0);
+                } catch (Exception e) {
+                    Log.w(TAG, "Error setting i-MID connect status to 0", e);
+                }
+            }
+        } else {
+            // Audio was switched away from smartphone (e.g. 96=FM, 98=AM, 133=USB, 216=CD, 255=Audio Off)
+            if (hasAudioFocus_ || MediaStatusEvent.isMediaPlaying()) {
+                if (Log.isDebug()) Log.d(TAG, "Audio switched away from AA (addr=" + audioAddress + "), sending pause to Android Auto");
+                InputDevice.sendMediaPause();
+            }
+            hasAudioFocus_ = false;
+            currentIdx_ = settings_.advanced.modeMgrVideoIdx(); // 133 (Video only)
+            currentModeState_ = ModeMgrMode.NOTIFY_VIDEO;
+
+            if (modeMgrManager_ != null) {
+                try {
+                    // Inform ModeMgr that OpenDroidAuto now only occupies video, surrendering audio focus to the car
+                    modeMgrManager_.notifyModeMgrStatus(settings_.advanced.modeMgrVideoIdx(), ModeMgrMode.NOTIFY_VIDEO);
+                } catch (Exception e) {
+                    Log.w(TAG, "Error notifying video-only status to ModeMgr", e);
+                }
+
+                if (settings_.advanced.hondaImidEnabled()) {
+                    try {
+                        if (Log.isDebug()) Log.d(TAG, "audioAddress " + audioAddress + " (Native Source) -> setImidConnectStatus 0");
+                        modeMgrManager_.setImidConnectStatus(0);
+                    } catch (Exception e) {
+                        Log.w(TAG, "Error setting i-MID connect status to 0", e);
+                    }
+                }
+            }
+        }
+    }
 
     private class ModeMgrServiceVideoCallBack extends IModeMgrServiceCallBack.Stub {
 
@@ -1162,6 +1250,12 @@ public class HondaConnectManager {
             hasAudioFocus_ = (currentModeState_ & ModeMgrMode.NOTIFY_AUDIO) != 0;
             currentIdx_ = idx;
 
+            if (settings_.advanced.hondaImidEnabled() && modeMgrManager_ != null && sound_param != 0) {
+                try {
+                    modeMgrManager_.setImidConnectStatus(0);
+                } catch (Exception ignored) {}
+            }
+
             if (Log.isDebug()) Log.d(TAG, "rcvOnInsCmd currentModeState_ = " + currentModeState_ + ", currentIdx_= " + currentIdx_ + " hasAudioFocus_= " + hasAudioFocus_);
 
             startHeartbeat();
@@ -1187,10 +1281,16 @@ public class HondaConnectManager {
 
             // Rimuovi i bit revocati dallo stato corrente
             if (currentIdx_ == idx) {
-                currentModeState_ &= ( (~modestate) + 4) ;
+                currentModeState_ &= ~modestate;
                 hasAudioFocus_ = (currentModeState_ & ModeMgrMode.NOTIFY_AUDIO) != 0;
             } else {
                 if (Log.isDebug()) Log.d(TAG, "rcvOffInsCmd currentIdx_ <> idx");
+            }
+
+            if (settings_.advanced.hondaImidEnabled() && modeMgrManager_ != null && sound_param != 0) {
+                try {
+                    modeMgrManager_.setImidConnectStatus(0);
+                } catch (Exception ignored) {}
             }
 
             if (Log.isDebug()) Log.d(TAG, "rcvOffInsCmd hasAudioFocus_ " + hasAudioFocus_ + ", currentModeState_ = " + currentModeState_ + ", currentIdx_= " + currentIdx_);
@@ -1263,6 +1363,12 @@ public class HondaConnectManager {
             hasAudioFocus_ = (currentModeState_ & ModeMgrMode.NOTIFY_AUDIO) != 0;
             currentIdx_ = idx;
 
+            if (settings_.advanced.hondaImidEnabled() && modeMgrManager_ != null && sound_param != 0) {
+                try {
+                    modeMgrManager_.setImidConnectStatus(0);
+                } catch (Exception ignored) {}
+            }
+
             if (Log.isDebug()) Log.d(TAG, "rcvOnInsCmd currentModeState_ = " + currentModeState_ + ", currentIdx_= " + currentIdx_ + " hasAudioFocus_= " + hasAudioFocus_);
 
             startHeartbeat();
@@ -1291,10 +1397,16 @@ public class HondaConnectManager {
             // Rimuovi i bit revocati dallo stato corrente
             if (Log.isDebug()) Log.d(TAG, "rcvOffInsCmd currentIdx_ = " + currentIdx_ + ", idx= " + idx);
             if (currentIdx_ == idx) {
-                currentModeState_ &= ( (~modestate) + 4) ;
+                currentModeState_ &= ~modestate;
                 hasAudioFocus_ = (currentModeState_ & ModeMgrMode.NOTIFY_AUDIO) != 0;
             } else {
                 if (Log.isDebug()) Log.d(TAG, "rcvOffInsCmd currentIdx_ <> idx");
+            }
+
+            if (settings_.advanced.hondaImidEnabled() && modeMgrManager_ != null && sound_param != 0) {
+                try {
+                    modeMgrManager_.setImidConnectStatus(0);
+                } catch (Exception ignored) {}
             }
 
             if (Log.isDebug()) Log.d(TAG, "rcvOffInsCmd hasAudioFocus_ " + hasAudioFocus_ + ", currentModeState_ = " + currentModeState_ + ", currentIdx_= " + currentIdx_);

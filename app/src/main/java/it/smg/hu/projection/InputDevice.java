@@ -23,6 +23,46 @@ import it.smg.libs.common.Log;
 public class InputDevice extends it.smg.libs.aasdk.projection.InputDevice implements View.OnTouchListener, View.OnKeyListener {
     private static final String TAG = "InputDevice";
 
+    private static volatile InputDevice sInstance_ = null;
+
+    public static void sendMediaPause() {
+        final InputDevice dev = sInstance_;
+        if (dev != null) {
+            try {
+                if (Log.isDebug()) Log.d(TAG, "sendMediaPause -> sending keycode 127 (PAUSE)");
+                dev.sendButtonEvent(0, 127); // ACTION_DOWN
+                new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                    try {
+                        if (sInstance_ != null) {
+                            sInstance_.sendButtonEvent(1, 127); // ACTION_UP
+                        }
+                    } catch (Exception ignored) {}
+                }, 50);
+            } catch (Exception e) {
+                Log.w(TAG, "Error sending media pause", e);
+            }
+        }
+    }
+
+    public static void sendMediaPlay() {
+        final InputDevice dev = sInstance_;
+        if (dev != null) {
+            try {
+                if (Log.isDebug()) Log.d(TAG, "sendMediaPlay -> sending keycode 126 (PLAY)");
+                dev.sendButtonEvent(0, 126); // ACTION_DOWN
+                new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                    try {
+                        if (sInstance_ != null) {
+                            sInstance_.sendButtonEvent(1, 126); // ACTION_UP
+                        }
+                    } catch (Exception ignored) {}
+                }, 50);
+            } catch (Exception e) {
+                Log.w(TAG, "Error sending media play", e);
+            }
+        }
+    }
+
     private final Rect screenGeometry_;
     private final Rect touchScreenGeometry_;
     private final boolean isTouchScreenAvailable_;
@@ -33,6 +73,7 @@ public class InputDevice extends it.smg.libs.aasdk.projection.InputDevice implem
     private Context context_;
 
     public InputDevice(Context ctx, SurfaceView surfaceView, InputDevice.OnKeyHolder keyHolder){
+        sInstance_ = this;
         surfaceView_ = surfaceView;
         keyHolder_ = keyHolder;
         context_ = ctx;
@@ -78,6 +119,10 @@ public class InputDevice extends it.smg.libs.aasdk.projection.InputDevice implem
                     settings.keymap.key(c.keyName(), c.defaultAction());
                     v = c.defaultAction();
                 }
+                // If it's the SOURCE button and mapped to PAUSE (127), use TOGGLE_PLAY (85) so it both plays and pauses
+                if (c == KeymapFragment.KeyMap.SOURCE && (v == 127 || v == 0)) {
+                    v = 85;
+                }
                 supportedButtonCodes_.put(k, v);
             }
         }
@@ -95,6 +140,9 @@ public class InputDevice extends it.smg.libs.aasdk.projection.InputDevice implem
     @Override
     public void stop() {
         if (Log.isInfo()) Log.i(TAG, "stop");
+        if (sInstance_ == this) {
+            sInstance_ = null;
+        }
         releaseFocus();
         surfaceView_ = null;
         keyHolder_ = null;

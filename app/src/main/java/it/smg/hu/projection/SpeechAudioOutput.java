@@ -13,7 +13,7 @@ public class SpeechAudioOutput extends AudioOutput {
         sampleSize_ = settings_.audio.speechSampleSize();
         sampleRate_ = settings_.audio.speechSampleRate();
 
-        if (settings_.advanced.hondaIntegrationEnabled()){
+        if (settings_.advanced.hondaIntegrationEnabled() && hondaConnectManager_ != null){
             audioCodecStreamType_ = hondaConnectManager_.mediaAudioStream(ChannelId.SPEECH_AUDIO);
         }
     }

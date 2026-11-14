@@ -48,7 +48,7 @@ public class OMXVideoCodec {
         surfaceView_ = surface;
         width_ = width;
         height_ = height;
-        nativeSurfaceInit (surface, height_, width_);
+        nativeSurfaceInit (surface, width_, height_);
     }
 
     public boolean init() {

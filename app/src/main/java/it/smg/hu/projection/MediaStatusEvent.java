@@ -20,6 +20,12 @@ public class MediaStatusEvent extends it.smg.libs.aasdk.projection.MediaStatusEv
     private final Settings settings_;
     private final NotificationFactory notificationFactory_;
 
+    private static volatile boolean isMediaPlaying_ = false;
+
+    public static boolean isMediaPlaying() {
+        return isMediaPlaying_;
+    }
+
     public MediaStatusEvent(){
         settings_ = Settings.instance();
         notificationFactory_ = NotificationFactory.instance();
@@ -31,6 +37,10 @@ public class MediaStatusEvent extends it.smg.libs.aasdk.projection.MediaStatusEv
     @Keep
     @Override
     public void mediaPlaybackUpdate(PlaybackUpdateEvent playbackUpdateEvent) {
+        if (playbackUpdateEvent != null && playbackUpdateEvent.playbackState != null) {
+            isMediaPlaying_ = (playbackUpdateEvent.playbackState == PlaybackState.PLAY);
+        }
+
         if (!settings_.video.showMediaNotification()) {
             return;
         }

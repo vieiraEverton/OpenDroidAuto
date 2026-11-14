@@ -41,11 +41,9 @@ public class MediaAudioOutput extends AudioOutput {
 
     @Override
     public void suspend() {
-        if (settings_.advanced.hondaIntegrationEnabled()){
-            if (Log.isDebug()) Log.d(TAG, "releaseAudioFocus");
-            hondaConnectManager_.releaseAudioFocus();
-        }
-
+        // Do NOT release audio focus on suspend; Android Auto suspends media
+        // during voice assistant interactions (Gemini) and navigation prompts.
+        // Surrendering focus here causes the car's native radio/CD to blare while Gemini speaks.
         super.suspend();
     }
 

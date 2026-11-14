@@ -95,7 +95,7 @@ void OMXVideoCodec::init_omxDecoderThread() {
     omxDecoder_->stop();
 }
 
-void OMXVideoCodec::setNativeWindow(ANativeWindow* nativeWindow, int height, int width){
+void OMXVideoCodec::setNativeWindow(ANativeWindow* nativeWindow, int width, int height){
     if (Log::isDebug()) Log_d("set native window size w: %d, h: %d", width, height);
     nativeWindow_ = nativeWindow;
     screenSize_.width = width;

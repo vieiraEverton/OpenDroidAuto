@@ -16,8 +16,8 @@ JOMXVideoCodec::Pointer JOMXVideoCodec::getJOMXVideoCodec(JNIEnv *env, jobject j
     return (JOMXVideoCodec::Pointer)env->GetLongField(jvideocodec, JOMXVideoCodec::handleId);
 }
 
-void JOMXVideoCodec::setNativeWindow(ANativeWindow* nativeWindow, int height, int width){
-    omxVideoCodec_->setNativeWindow(nativeWindow, height, width);
+void JOMXVideoCodec::setNativeWindow(ANativeWindow* nativeWindow, int width, int height){
+    omxVideoCodec_->setNativeWindow(nativeWindow, width, height);
 }
 
 status_t JOMXVideoCodec::init(int fps){
@@ -67,7 +67,7 @@ Java_it_smg_libs_omxvideocodec_OMXVideoCodec_nativeSurfaceInit(JNIEnv *env, jobj
     JOMXVideoCodec::Pointer jOMXVideoCodec = JOMXVideoCodec::getJOMXVideoCodec(env, thiz);
 
     ANativeWindow* nativeWindow = ANativeWindow_fromSurface(env, surface);
-    jOMXVideoCodec->setNativeWindow(nativeWindow, height, width);
+    jOMXVideoCodec->setNativeWindow(nativeWindow, width, height);
 }
 
 extern "C"

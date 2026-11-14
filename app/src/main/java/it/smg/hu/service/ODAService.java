@@ -115,10 +115,19 @@ public class ODAService extends Service implements IAndroidAutoEntityEventHandle
         startThread_ = new Thread(() -> {
             Looper.prepare();
 
-            if (usbManager_.aoapDevice() != null) {
+            LibUsbDevice device = usbManager_.aoapDevice();
+            if (device == null) {
+                for (int i = 0; i < 10 && device == null && !stopRequested_; i++) {
+                    try {
+                        Thread.sleep(200);
+                    } catch (InterruptedException ignored) {}
+                    device = usbManager_.aoapDevice();
+                }
+            }
+
+            if (device != null) {
                 if (Log.isVerbose()) Log.v(TAG, "aoap device available, start in usb mode");
                 try {
-                    LibUsbDevice device = usbManager_.aoapDevice();
                     if (device.open()) {
                         if (Log.isInfo()) Log.i(TAG, "device opened");
                         androidAutoEntity_ = AndroidAutoEntityFactory.create(this, device, surfaceView, keyHolder);
@@ -143,6 +152,7 @@ public class ODAService extends Service implements IAndroidAutoEntityEventHandle
                 }
             } else {
                 ConnectionManager.instance().failed(getString(R.string.connection_usb_unavailable));
+                stop();
             }
             if (Log.isInfo()) Log.i(TAG, "start usb thead completed");
         });
@@ -225,6 +235,10 @@ public class ODAService extends Service implements IAndroidAutoEntityEventHandle
         if (androidAutoEntity_ != null) {
             androidAutoEntity_.gainFocus();
         }
+    }
+
+    public boolean isSessionRunning() {
+        return isRunning_ && androidAutoEntity_ != null;
     }
 
     /**

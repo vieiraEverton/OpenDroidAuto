@@ -89,20 +89,23 @@ public class AudioInput extends it.smg.libs.aasdk.projection.AudioInput {
     @Keep
     @Override
     public boolean start() {
-        if (audioRecord_ != null) {
-            stop();
+        stop();
+
+        if (settings_.advanced.hondaIntegrationEnabled() && hondaConnectManager_ != null) {
+            hondaConnectManager_.startMicSession();
         }
 
-        isActive_ = true;
-
-        audioRecord_ = new AudioRecord(sourceType_, sampleRate_, channels2num(channelConfig_), sampleSizeFromInt(sampleSize_), bufferSize_ * 4);
-
-        if (settings_.advanced.hondaIntegrationEnabled()) {
-            hondaConnectManager_.startMicSession();
+        try {
+            audioRecord_ = new AudioRecord(sourceType_, sampleRate_, channels2num(channelConfig_), sampleSizeFromInt(sampleSize_), bufferSize_ * 4);
+        } catch (Exception e) {
+            Log.e(TAG, "Error creating AudioRecord", e);
+            stop();
+            return false;
         }
 
         if (Log.isDebug()) Log.d(TAG, "State: " + audioRecord_.getState() + ", recording state: " + audioRecord_.getRecordingState());
         if (audioRecord_.getState() != AudioRecord.STATE_INITIALIZED){
+            Log.e(TAG, "AudioRecord not initialized");
             stop();
             return false;
         }
@@ -121,6 +124,7 @@ public class AudioInput extends it.smg.libs.aasdk.projection.AudioInput {
             return false;
         }
 
+        isActive_ = true;
         return true;
     }
 
@@ -129,24 +133,29 @@ public class AudioInput extends it.smg.libs.aasdk.projection.AudioInput {
     public void stop() {
         if (Log.isInfo()) Log.i(TAG, "stop -> isActive= " + isActive_);
 
-        if (isActive_) {
-            if (audioRecord_ != null) {
-                if (Log.isDebug()) Log.d(TAG, "stop audioRecord");
-                try {
+        isActive_ = false;
+
+        if (audioRecord_ != null) {
+            if (Log.isDebug()) Log.d(TAG, "stop audioRecord");
+            try {
+                if (audioRecord_.getRecordingState() == AudioRecord.RECORDSTATE_RECORDING) {
                     audioRecord_.stop();
-                } catch (IllegalStateException e) {
-                    Log.e(TAG, "stop audioRecord error", e);
                 }
+            } catch (Exception e) {
+                Log.e(TAG, "stop audioRecord error", e);
+            }
 
-                if (Log.isDebug()) Log.d(TAG, "release audioRecord");
+            if (Log.isDebug()) Log.d(TAG, "release audioRecord");
+            try {
                 audioRecord_.release();
+            } catch (Exception e) {
+                Log.e(TAG, "release audioRecord error", e);
             }
+            audioRecord_ = null;
+        }
 
-            isActive_ = false;
-
-            if (settings_.advanced.hondaIntegrationEnabled()) {
-                hondaConnectManager_.stopMicSession();
-            }
+        if (settings_.advanced.hondaIntegrationEnabled() && hondaConnectManager_ != null) {
+            hondaConnectManager_.stopMicSession();
         }
 
         if (Log.isDebug()) Log.d(TAG, "stop done");

@@ -44,17 +44,25 @@ public class PlayerActivity extends Activity implements ServiceConnection, Surfa
     private boolean isServiceBound_ = false;
 
     private static boolean isActive_;
+    private static PlayerActivity instance_;
+
+    public static void finishIfRunning() {
+        if (instance_ != null) {
+            instance_.exitSession();
+        }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        instance_ = this;
         if (Log.isDebug()) Log.d(TAG, "onCreate");
 
         localBroadcastManager_ = LocalBroadcastManager.getInstance(this);
 
         if (savedInstanceState != null){
             startMode_ = savedInstanceState.getString("startMode");
-            isRunning_ = savedInstanceState.getBoolean("isRunning");
+            isRunning_ = false;
         } else {
             Bundle b = getIntent().getExtras();
             startMode_ = b == null ? null : b.getString("mode");
@@ -73,6 +81,7 @@ public class PlayerActivity extends Activity implements ServiceConnection, Surfa
         }
 
         surfaceView_ = findViewById(R.id.surfaceView);
+        surfaceView_.getHolder().addCallback(this);
     }
 
     @Override
@@ -207,6 +216,9 @@ public class PlayerActivity extends Activity implements ServiceConnection, Surfa
     protected void onDestroy() {
         super.onDestroy();
         if (Log.isDebug()) Log.d(TAG, "onDestroy");
+        if (instance_ == this) {
+            instance_ = null;
+        }
     }
 
     private void initReceivers(){
@@ -240,7 +252,8 @@ public class PlayerActivity extends Activity implements ServiceConnection, Surfa
 
         isServiceBound_ = true;
 
-        if (isRunning_){
+        if (odaService_ != null && odaService_.isSessionRunning()){
+            isRunning_ = true;
             odaService_.gainFocus();
         } else {
             start();

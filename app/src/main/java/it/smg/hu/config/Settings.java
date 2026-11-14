@@ -172,7 +172,7 @@ public class Settings {
 
         public final static int KEYMAP_BTN_LEFT_DEFAULT_VALUE = 88; // PREV
         public final static int KEYMAP_BTN_RIGHT_DEFAULT_VALUE = 87; // NEXT
-        public final static int KEYMAP_BTN_SOURCE_DEFAULT_VALUE = 127; // PAUSE
+        public final static int KEYMAP_BTN_SOURCE_DEFAULT_VALUE = 85; // TOGGLE_PLAY (PLAY_PAUSE)
         public final static int KEYMAP_BTN_PLUS_DEFAULT_VALUE = 19; // UP
         public final static int KEYMAP_BTN_MINUS_DEFAULT_VALUE = 20; // DOWN
         public final static int KEYMAP_BTN_TALK_DEFAULT_VALUE = 84; // MICROPHONE_1

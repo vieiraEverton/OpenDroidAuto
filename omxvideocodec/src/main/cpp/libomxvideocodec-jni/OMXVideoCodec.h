@@ -19,7 +19,7 @@ public:
 
     status_t init(int fps);
     void shutdown();
-    void setNativeWindow(ANativeWindow* nativeWindow, int height, int width);
+    void setNativeWindow(ANativeWindow* nativeWindow, int width, int height);
 
     OMXSource::Pointer source();
     OMXDecoder::Pointer decoder();
