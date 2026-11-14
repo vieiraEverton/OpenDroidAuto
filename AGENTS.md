@@ -26,6 +26,7 @@ Este documento estabelece as regras de desenvolvimento, arquitetura de hardware,
   ```
 - **Binário Gerado:** [`app/build/outputs/apk/release/HondaAppCenter_A1.apk`](file:///home/everton/Projects/Everton/OpenDroidAuto/app/build/outputs/apk/release/HondaAppCenter_A1.apk).
 - **Deploy Automotivo:** Copiar para pendrive FAT32 em `/run/media/everton/EVERTON/ODA/HondaAppCenter_A1.apk`.
+- **Regra Mandatória de Git & Deploy:** Sempre que um APK for gerado, faça imediatamente `git commit` das alterações e `git push` para o repositório remoto (`git@github.com:vieiraEverton/OpenDroidAuto.git`), mantendo as branches `civic-exr-2016-brasil` e `main` sincronizadas.
 
 ---
 
