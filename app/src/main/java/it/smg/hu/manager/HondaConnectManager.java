@@ -117,6 +117,7 @@ public class HondaConnectManager {
     private boolean isRunning_;
     private boolean hasAudioFocus_;
     private boolean hasAudioFocusForMic_;
+    private boolean wasMediaPlayingBeforeSourceSwitch_;
     private ProcessControl pControl_;
     private CountDownLatch waitCondOn_;
     private CountDownLatch waitCondOff_;
@@ -376,6 +377,19 @@ public class HondaConnectManager {
     public void decreaseVolume(){
         if (Log.isDebug()) Log.d(TAG, "decreaseVolume");
         modeMgrManager_.reqModeMgrSteeringVolCmd(false);
+    }
+
+    public void triggerAudioSourceChange(){
+        if (Log.isDebug()) Log.d(TAG, "triggerAudioSourceChange -> startAudioLauncher");
+        if (steeringMenuServiceIface_ != null) {
+            try {
+                steeringMenuServiceIface_.startAudioLauncher();
+            } catch (Exception e) {
+                Log.w(TAG, "Error invoking startAudioLauncher", e);
+            }
+        } else {
+            if (Log.isWarn()) Log.w(TAG, "triggerAudioSourceChange: steeringMenuServiceIface_ is null");
+        }
     }
 
     // Used in onCreate
@@ -1181,6 +1195,10 @@ public class HondaConnectManager {
             currentIdx_ = settings_.advanced.modeMgrAudioVideoIdx();
             currentModeState_ = ModeMgrMode.NOTIFY_BOTH;
 
+            registerSteeringMenuCallback();
+            registerModeMgrSWCallbacks();
+            notifySteeringMenuDispMode(1);
+
             if (settings_.advanced.hondaImidEnabled() && modeMgrManager_ != null) {
                 try {
                     if (Log.isDebug()) Log.d(TAG, "audioAddress 197 (Bluetooth) -> setImidConnectStatus 0");
@@ -1189,23 +1207,46 @@ public class HondaConnectManager {
                     Log.w(TAG, "Error setting i-MID connect status to 0", e);
                 }
             }
+
+            // If media was playing before switching away to native source (or pressing power off), resume playback
+            if (wasMediaPlayingBeforeSourceSwitch_) {
+                wasMediaPlayingBeforeSourceSwitch_ = false;
+                if (Log.isDebug()) Log.d(TAG, "Audio returned to Bluetooth (197), was playing before switch -> resume playback in 800ms");
+                mainHandler_.postDelayed(() -> {
+                    try {
+                        InputDevice.sendMediaPlay();
+                    } catch (Exception e) {
+                        Log.w(TAG, "Error resuming playback on audio return", e);
+                    }
+                }, 800);
+            }
         } else {
             // Audio was switched away from smartphone (e.g. 96=FM, 98=AM, 133=USB, 216=CD, 255=Audio Off)
             if (hasAudioFocus_ || MediaStatusEvent.isMediaPlaying()) {
-                if (Log.isDebug()) Log.d(TAG, "Audio switched away from AA (addr=" + audioAddress + "), sending pause to Android Auto");
+                wasMediaPlayingBeforeSourceSwitch_ = MediaStatusEvent.isMediaPlaying();
+                if (Log.isDebug()) Log.d(TAG, "Audio switched away from AA (addr=" + audioAddress + "), wasPlaying=" + wasMediaPlayingBeforeSourceSwitch_ + ", sending pause to Android Auto");
                 InputDevice.sendMediaPause();
             }
             hasAudioFocus_ = false;
-            currentIdx_ = settings_.advanced.modeMgrVideoIdx(); // 133 (Video only)
+            currentIdx_ = settings_.advanced.modeMgrVideoIdx(); // 214 (MODEMGR_LADDR_3RD_PARTY_NAVI)
             currentModeState_ = ModeMgrMode.NOTIFY_VIDEO;
 
             if (modeMgrManager_ != null) {
                 try {
+                    // Release audio focus on 197 and assert video on 214
+                    releaseFocus(settings_.advanced.modeMgrAudioVideoIdx(), ModeMgrMode.REQUEST_AUDIO);
+                    requestFocus(settings_.advanced.modeMgrVideoIdx(), ModeMgrMode.REQUEST_VIDEO);
+
                     // Inform ModeMgr that OpenDroidAuto now only occupies video, surrendering audio focus to the car
                     modeMgrManager_.notifyModeMgrStatus(settings_.advanced.modeMgrVideoIdx(), ModeMgrMode.NOTIFY_VIDEO);
                 } catch (Exception e) {
                     Log.w(TAG, "Error notifying video-only status to ModeMgr", e);
                 }
+
+                // Relinquish steering wheel controls to the car's native audio source (FM/AM tuner)
+                unregisterSteeringMenuCallback();
+                unregisterModeMgrSWCallbacks();
+                notifySteeringMenuDispMode(0);
 
                 if (settings_.advanced.hondaImidEnabled()) {
                     try {

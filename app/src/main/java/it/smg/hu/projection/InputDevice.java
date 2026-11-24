@@ -119,9 +119,9 @@ public class InputDevice extends it.smg.libs.aasdk.projection.InputDevice implem
                     settings.keymap.key(c.keyName(), c.defaultAction());
                     v = c.defaultAction();
                 }
-                // If it's the SOURCE button and mapped to PAUSE (127), use TOGGLE_PLAY (85) so it both plays and pauses
-                if (c == KeymapFragment.KeyMap.SOURCE && (v == 127 || v == 0)) {
-                    v = 85;
+                // If it's the SOURCE button and unassigned or legacy default, set to ACTION_CHANGE_SOURCE
+                if (c == KeymapFragment.KeyMap.SOURCE && v == 0) {
+                    v = Settings.Keymap.ACTION_CHANGE_SOURCE;
                 }
                 supportedButtonCodes_.put(k, v);
             }
@@ -240,6 +240,10 @@ public class InputDevice extends it.smg.libs.aasdk.projection.InputDevice implem
             } else if (keyCode == minusKeyCode && Settings.instance().advanced.hondaIntegrationEnabled()) {
                 if (event.getAction() == KeyEvent.ACTION_DOWN) { // increase/decrease volume only on action down to prevent double increase/decrease
                     HondaConnectManager.instance().decreaseVolume();
+                }
+            } else if (button == Settings.Keymap.ACTION_CHANGE_SOURCE) {
+                if (event.getAction() == KeyEvent.ACTION_DOWN && Settings.instance().advanced.hondaIntegrationEnabled()) {
+                    HondaConnectManager.instance().triggerAudioSourceChange();
                 }
             } else {
                 int action = event.getAction(); // 1 - UP, 0 - DOWN

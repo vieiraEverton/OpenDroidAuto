@@ -113,6 +113,7 @@
 
     <string-array name="keymap_btn_labels">
         <item>NONE</item>
+        <item>CHANGE_AUDIO_SOURCE</item>
         <item>MICROPHONE_2</item>
         <item>MENU</item>
         <item>HOME</item>
@@ -134,6 +135,7 @@
 
     <integer-array name="keymap_btn_values">
         <item>0</item>
+        <item>999</item>
         <item>1</item>
         <item>2</item>
         <item>3</item>

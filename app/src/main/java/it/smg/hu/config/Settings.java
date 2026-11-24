@@ -170,9 +170,11 @@ public class Settings {
         public final static String KEYMAP_BTN_MINUS = "keymap_btn_minus";
         public final static String KEYMAP_BTN_TALK = "keymap_btn_talk";
 
+        public final static int ACTION_CHANGE_SOURCE = 999;
+
         public final static int KEYMAP_BTN_LEFT_DEFAULT_VALUE = 88; // PREV
         public final static int KEYMAP_BTN_RIGHT_DEFAULT_VALUE = 87; // NEXT
-        public final static int KEYMAP_BTN_SOURCE_DEFAULT_VALUE = 85; // TOGGLE_PLAY (PLAY_PAUSE)
+        public final static int KEYMAP_BTN_SOURCE_DEFAULT_VALUE = ACTION_CHANGE_SOURCE; // 999 (CHANGE_AUDIO_SOURCE)
         public final static int KEYMAP_BTN_PLUS_DEFAULT_VALUE = 19; // UP
         public final static int KEYMAP_BTN_MINUS_DEFAULT_VALUE = 20; // DOWN
         public final static int KEYMAP_BTN_TALK_DEFAULT_VALUE = 84; // MICROPHONE_1
@@ -517,7 +519,7 @@ public class Settings {
         public final static boolean ADVANCED_ENABLE_HONDA_IMID_DEFAULT_VALUE = false;
         public final static String ADVANCED_SW_MODE_DEFAULT_VALUE = "SW SERVICE";
         public final static int ADVANCED_MODEMGRAUDIOVIDEO_IDX_DEFAULT_VALUE = 197; // 223 appmode, 220 appmodepic, 213 3rd party, 214 3rd party pic, 197 bt, 92 cam, 98 cd, 196 dab, 216 hdmi, 201 ipod, 222 mirrolink, 221 mirrorlink pic, 255 off, 87 phone, 198 tel rcv, 199 usb audio, 133 voicetag, 136 siri, 96 radio
-        public final static int ADVANCED_MODEMGRVIDEO_IDX_DEFAULT_VALUE = 133; // 223 appmode, 220 appmodepic, 213 3rd party, 214 3rd party pic, 197 bt, 92 cam, 98 cd, 196 dab, 216 hdmi, 201 ipod, 222 mirrolink, 221 mirrorlink pic, 255 off, 87 phone, 198 tel rcv, 199 usb audio, 133 voicetag, 136 siri, 96 radio
+        public final static int ADVANCED_MODEMGRVIDEO_IDX_DEFAULT_VALUE = 214; // 214 = 3rd party navi pic (was 133 voicetag which blanked i-MID with audio power off)
         public final static int ADVANCED_SW_IDX_DEFAULT_VALUE = 260; // 258 source, 263 source header, 259 disp, 260 menu, 265 launcher, 266 imid
 
         public void logDir(String logDir){
@@ -620,7 +622,13 @@ public class Settings {
         }
 
         public int modeMgrVideoIdx(){
-            return SP.getInt(ADVANCED_MODEMGRVIDEO_IDX, ADVANCED_MODEMGRVIDEO_IDX_DEFAULT_VALUE);
+            int val = SP.getInt(ADVANCED_MODEMGRVIDEO_IDX, ADVANCED_MODEMGRVIDEO_IDX_DEFAULT_VALUE);
+            if (val == 133) {
+                // Auto-migrate legacy default 133 (VoiceTag) to 214 (3rd party navi pic) to preserve i-MID
+                val = ADVANCED_MODEMGRVIDEO_IDX_DEFAULT_VALUE;
+                SP.edit().putInt(ADVANCED_MODEMGRVIDEO_IDX, val).apply();
+            }
+            return val;
         }
 
         public void modeMgrVideoIdx(int idx){
