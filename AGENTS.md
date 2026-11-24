@@ -56,3 +56,15 @@ Este documento estabelece as regras de desenvolvimento, arquitetura de hardware,
 ### 📺 Decodificador de Vídeo por Hardware (OpenMAX IL)
 - No JNI e em C++ nativo, os parâmetros de dimensão da janela devem ser passados rigorosamente na ordem `(nativeWindow, width, height)`. Inverter para `(height, width)` gera corrupção de buffer e tela preta.
 - A `SurfaceView` da [`PlayerActivity`](file:///home/everton/Projects/Everton/OpenDroidAuto/app/src/main/res/layout/activity_player.xml) não deve conter fundo preto (`android:background`), garantindo a transparência do buffer nativo.
+
+---
+
+## 🔮 4. Backlog de Features Futuras (Não implementar agora)
+
+1. **Debounce e Filtragem Seletiva em `handleAudioAddressChanged`:**
+   - **Contexto:** Ao usar adaptador Wi-Fi de Android Auto, quedas ou reconexões transitórias no canal Bluetooth HFP da central podem emitir breves notificações de status de áudio (`255` / Áudio desligado), fazendo o callback `handleAudioAddressChanged` disparar indevidamente `InputDevice.sendMediaPause()`, pausando a música (~1 vez por viagem).
+   - **Melhoria Futura:**
+     - Implementar debounce com delay de 1.5 a 2.0 segundos antes de enviar `InputDevice.sendMediaPause()`.
+     - Filtrar estritamente apenas trocas de fontes físicas ativas reais do carro (FM `96`, AM `98`, CD `216`), ignorando estados transitórios nulos ou desligados (`0` e `255`).
+2. **Buffer Resiliente a Oscilações de Wi-Fi no `AudioCodec.java`:**
+   - Avaliar aumento do tamanho da `ArrayBlockingQueue` (atualmente fixada em 32 chunks) para 64 ou 128 amostras, prevenindo descarte precoce de pacotes de áudio quando o dongle Wi-Fi sofrer rajadas de latência.
