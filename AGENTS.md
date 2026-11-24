@@ -68,3 +68,7 @@ Este documento estabelece as regras de desenvolvimento, arquitetura de hardware,
      - Filtrar estritamente apenas trocas de fontes físicas ativas reais do carro (FM `96`, AM `98`, CD `216`), ignorando estados transitórios nulos ou desligados (`0` e `255`).
 2. **Buffer Resiliente a Oscilações de Wi-Fi no `AudioCodec.java`:**
    - Avaliar aumento do tamanho da `ArrayBlockingQueue` (atualmente fixada em 32 chunks) para 64 ou 128 amostras, prevenindo descarte precoce de pacotes de áudio quando o dongle Wi-Fi sofrer rajadas de latência.
+3. **Resolução de "Áudio Desligado" no I-MID em Fontes Nativas (FM/AM/CD):**
+   - **Problema:** Quando o OpenDroidAuto está aberto na tela principal de 7" e o usuário comuta para fontes de áudio nativas como Rádio FM (`96`), AM (`98`) ou CD (`216`), o som toca nos alto-falantes, mas o painel I-MID fica em tela preta com a mensagem "Áudio desligado".
+   - **Causa Raiz:** O índice de vídeo padrão `modeMgrVideoIdx = 133` (`VOICETAG`) faz o `ModeMgrService` inibir os cabeçalhos de áudio no painel superior por entender que há uma sobreposição de comando de voz. Além disso, o canal 197 não é liberado explicitamente no ModeMgr e o `StatusBarExManager` mantém interrupt draw de Bluetooth ativo.
+   - **Plano Futuro:** Testar índices de vídeo alternativos como `214` (`3RD_PARTY_PIC`) ou `220` (`APPMODE_PIC`), implementar `sendModeMgrOffReq` para o foco de áudio do 197 e sincronizar a fonte nativa ativa (`SOURCE_NAME_FM = 1`) no `StatusBarEx`.
