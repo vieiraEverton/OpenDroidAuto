@@ -242,9 +242,9 @@ public class InputDevice extends it.smg.libs.aasdk.projection.InputDevice implem
                     HondaConnectManager.instance().decreaseVolume();
                 }
             } else if (button == Settings.Keymap.ACTION_CHANGE_SOURCE) {
-                if (event.getAction() == KeyEvent.ACTION_DOWN && Settings.instance().advanced.hondaIntegrationEnabled()) {
-                    HondaConnectManager.instance().triggerAudioSourceChange();
-                }
+                // Allow the car's native system / CAN bus to handle SOURCE button natively without ODA intercepting
+                if (Log.isDebug()) Log.d(TAG, "SOURCE key mapped to CHANGE_AUDIO_SOURCE -> letting native system handle it");
+                return false;
             } else {
                 int action = event.getAction(); // 1 - UP, 0 - DOWN
                 sendButtonEvent(action, button);

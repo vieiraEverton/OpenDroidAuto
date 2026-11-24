@@ -519,7 +519,7 @@ public class Settings {
         public final static boolean ADVANCED_ENABLE_HONDA_IMID_DEFAULT_VALUE = false;
         public final static String ADVANCED_SW_MODE_DEFAULT_VALUE = "SW SERVICE";
         public final static int ADVANCED_MODEMGRAUDIOVIDEO_IDX_DEFAULT_VALUE = 197; // 223 appmode, 220 appmodepic, 213 3rd party, 214 3rd party pic, 197 bt, 92 cam, 98 cd, 196 dab, 216 hdmi, 201 ipod, 222 mirrolink, 221 mirrorlink pic, 255 off, 87 phone, 198 tel rcv, 199 usb audio, 133 voicetag, 136 siri, 96 radio
-        public final static int ADVANCED_MODEMGRVIDEO_IDX_DEFAULT_VALUE = 214; // 214 = 3rd party navi pic (was 133 voicetag which blanked i-MID with audio power off)
+        public final static int ADVANCED_MODEMGRVIDEO_IDX_DEFAULT_VALUE = 133; // 133 = voicetag (stable video idx, 214 caused mode negotiation timeout/kickout)
         public final static int ADVANCED_SW_IDX_DEFAULT_VALUE = 260; // 258 source, 263 source header, 259 disp, 260 menu, 265 launcher, 266 imid
 
         public void logDir(String logDir){
@@ -623,8 +623,8 @@ public class Settings {
 
         public int modeMgrVideoIdx(){
             int val = SP.getInt(ADVANCED_MODEMGRVIDEO_IDX, ADVANCED_MODEMGRVIDEO_IDX_DEFAULT_VALUE);
-            if (val == 133) {
-                // Auto-migrate legacy default 133 (VoiceTag) to 214 (3rd party navi pic) to preserve i-MID
+            if (val == 214) {
+                // Revert any migration to 214 back to safe default 133
                 val = ADVANCED_MODEMGRVIDEO_IDX_DEFAULT_VALUE;
                 SP.edit().putInt(ADVANCED_MODEMGRVIDEO_IDX, val).apply();
             }
