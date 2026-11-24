@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 OpenDroidAuto is an unofficial Android Auto implementation for Honda Connect head units running Android 4.0.4 (API 15, Ice Cream Sandwich). It runs on Honda Civic, HR-V, CR-V, Jazz, and similar 2015–2019 Honda models. The APK is installed directly on the head unit.
 
+Note: The vehicle setup uses a wireless Android Auto adapter (Wi-Fi dongle) plugged into the car's USB port, with the phone connecting wirelessly via Wi-Fi.
+
 The codebase is ~97% C++ (Android Auto protocol implementation) with thin Java wrappers, targeting armeabi-v7a (32-bit ARM) only.
 
 ## Build Commands

@@ -10,6 +10,7 @@ Este documento estabelece as regras de desenvolvimento, arquitetura de hardware,
 - **Central Multimídia:** Fujitsu Ten Display Audio (7 polegadas touch capacitivo).
 - **SoC:** Nvidia Tegra 3 (T30) Quad-Core ARM Cortex-A9 32-bit (`armeabi-v7a`).
 - **Sistema Operacional:** Android 4.0.4 (Ice Cream Sandwich, API 15).
+- **Conexão do Smartphone:** Adaptador Wireless Android Auto (Dongle Wi-Fi conectado na porta USB do Civic; o smartphone Xiaomi conecta-se sem fio ao dongle via Wi-Fi/BT).
 - **Painel Superior:** I-MID (Intelligent Multi-Information Display).
 - **Links Obrigatórios:** Utilize markdown com links clicáveis `file://` para arquivos e pastas.
 
